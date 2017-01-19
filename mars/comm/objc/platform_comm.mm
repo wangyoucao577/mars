@@ -34,6 +34,21 @@
 #include "comm/thread/lock.h"
 #include "comm/network/getifaddrs.h"
 
+//#define USE_NSLOG_AS_CONSOLE_LOG_CALL
+#ifndef USE_NSLOG_AS_CONSOLE_LOG_CALL
+extern intmax_t xlogger_pid();
+extern intmax_t xlogger_tid();
+
+#ifdef _WIN32
+#define PRIdMAX "lld"
+#define snprintf _snprintf
+#else
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#endif
+
+#endif
+
 #if !TARGET_OS_IPHONE
 static float __GetSystemVersion() {
     //	float system_version = [UIDevice currentDevice].systemVersion.floatValue;
@@ -190,11 +205,23 @@ void ConsoleLog(const XLoggerInfo* _info, const char* _log)
     const char* file_name = ExtractFileName(_info->filename);
     
     char log[16 * 1024] = {0};
+    
+#ifdef USE_NSLOG_AS_CONSOLE_LOG_CALL
     snprintf(log, sizeof(log), "[%s][%s][%s, %s, %d][%s", levelStrings[_info->level], NULL == _info->tag ? "" : _info->tag, file_name, strFuncName, _info->line, _log);
+    NSLog(@"%@", [NSString stringWithUTF8String:log]);
+#else
+    //use fprintf to have a good performance
+    struct timeval timeval;
+    gettimeofday(&timeval, NULL);
+    time_t sec = 0 == timeval.tv_sec ? 1 : timeval.tv_sec;
+    tm tm = *localtime((const time_t*)&sec);
     
+    snprintf(log, sizeof(log), "%d-%02d-%02d %02d:%02d:%02d.%.3d [%" PRIdMAX ":%" PRIdMAX "] [%s][%s][%s, %s, %d][%s",  1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday,
+             tm.tm_hour, tm.tm_min, tm.tm_sec, timeval.tv_usec / 1000, xlogger_pid(), xlogger_tid(), levelStrings[_info->level], NULL == _info->tag ? "" : _info->tag, file_name, strFuncName, _info->line, _log);
     
-    //NSLog(@"%@", [NSString stringWithUTF8String:log]);
     fprintf(stdout, "%s\n", log);
+#endif
+    
 }
 
 bool isNetworkConnected()
