@@ -194,7 +194,7 @@ void ConsoleLog(const XLoggerInfo* _info, const char* _log)
     
     
     //NSLog(@"%@", [NSString stringWithUTF8String:log]);
-    fprintf(stdout, "%s", log);
+    fprintf(stdout, "%s\n", log);
 }
 
 bool isNetworkConnected()
