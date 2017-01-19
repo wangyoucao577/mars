@@ -104,6 +104,9 @@ static bool sg_consolelog_open = true;
 static bool sg_consolelog_open = false;
 #endif
 
+static bool sg_is_enable_compress = true;   //default ON
+static bool sg_is_enable_mmap = true;       //default ON
+
 static void __async_log_thread();
 static Thread sg_thread_async(&__async_log_thread);
 
@@ -719,12 +722,12 @@ void appender_open(TAppenderMode _mode, const char* _dir, const char* _nameprefi
     snprintf(mmap_file_path, sizeof(mmap_file_path), "%s/%s.mmap2", sg_cache_logdir.empty()?_dir:sg_cache_logdir.c_str(), _nameprefix);
 
     bool use_mmap = false;
-    if (OpenMmapFile(mmap_file_path, kBufferBlockLength, sg_mmmap_file))  {
-        sg_log_buff = new LogBuffer(sg_mmmap_file.data(), kBufferBlockLength, true);
+    if (sg_is_enable_mmap && OpenMmapFile(mmap_file_path, kBufferBlockLength, sg_mmmap_file))  {
+        sg_log_buff = new LogBuffer(sg_mmmap_file.data(), kBufferBlockLength, sg_is_enable_compress);
         use_mmap = true;
     } else {
         char* buffer = new char[kBufferBlockLength];
-        sg_log_buff = new LogBuffer(buffer, kBufferBlockLength, true);
+        sg_log_buff = new LogBuffer(buffer, kBufferBlockLength, sg_is_enable_compress);
         use_mmap = false;
     }
 
@@ -886,6 +889,14 @@ bool appender_get_current_log_cache_path(char* _logPath, unsigned int _len) {
 
 void appender_set_console_log(bool _is_open) {
     sg_consolelog_open = _is_open;
+}
+
+void appender_set_enable_mmap(bool _is_enable) {
+    sg_is_enable_mmap = _is_enable;
+}
+
+void appender_set_enable_compress(bool _is_enable) {
+    sg_is_enable_compress = _is_enable;
 }
 
 void appender_setExtraMSg(const char* _msg, unsigned int _len) {
